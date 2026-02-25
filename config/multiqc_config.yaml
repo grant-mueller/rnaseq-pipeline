@@ -1,0 +1,26 @@
+title: "RNA-seq Pipeline QC Report"
+subtitle: "Automated differential expression pipeline"
+intro_text: "MultiQC report aggregating FASTQC, STAR, featureCounts and fastp results."
+
+report_header_info:
+  - Contact: "bioinformatics@example.com"
+  - Application: "RNA-seq DE Pipeline"
+
+module_order:
+  - fastqc:
+      name: "FastQC (raw)"
+      path_filters:
+        - "*/fastqc/raw/*"
+  - fastqc:
+      name: "FastQC (trimmed)"
+      path_filters:
+        - "*/fastqc/trimmed/*"
+  - fastp
+  - star
+  - featurecounts
+
+extra_fn_clean_exts:
+  - "_R1"
+  - "_R2"
+  - ".fastq.gz"
+  - "_trimmed"

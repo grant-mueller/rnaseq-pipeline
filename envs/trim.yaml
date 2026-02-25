@@ -1,0 +1,7 @@
+name: rnaseq_trim
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - fastp=0.23.4

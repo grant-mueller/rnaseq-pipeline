@@ -1,0 +1,7 @@
+sample,condition,read1,read2
+EV_15C_rep1,EV_15C,data/raw/SRR8257107_1.fastq.gz,data/raw/SRR8257107_2.fastq.gz
+EV_15C_rep2,EV_15C,data/raw/SRR8257108_1.fastq.gz,data/raw/SRR8257108_2.fastq.gz
+EV_15C_rep3,EV_15C,data/raw/SRR8257109_1.fastq.gz,data/raw/SRR8257109_2.fastq.gz
+EV_20C_rep1,EV_20C,data/raw/SRR8257110_1.fastq.gz,data/raw/SRR8257110_2.fastq.gz
+EV_20C_rep2,EV_20C,data/raw/SRR8257111_1.fastq.gz,data/raw/SRR8257111_2.fastq.gz
+EV_20C_rep3,EV_20C,data/raw/SRR8257112_1.fastq.gz,data/raw/SRR8257112_2.fastq.gz

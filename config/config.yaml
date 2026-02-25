@@ -1,0 +1,68 @@
+# =============================================================================
+# RNA-seq Pipeline Configuration
+# =============================================================================
+
+# ---------------------
+# Sample Sheet
+# ---------------------
+# Path to CSV with columns: sample,condition,read1,read2
+samples: "config/samples.csv"
+
+# ---------------------
+# Reference Genome
+# ---------------------
+genome:
+  fasta: "data/reference/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa"
+  gtf:   "data/reference/Caenorhabditis_elegans.WBcel235.111.gtf"
+  # STAR index directory — will be built if it doesn't exist
+  star_index: "data/reference/star_index"
+  # Length of genomic sequence around annotated junctions
+  sjdb_overhang: 75  # typically read_length - 1
+
+# ---------------------
+# Trimming (fastp)
+# ---------------------
+trimming:
+  min_length: 36
+  quality: 20
+  threads: 4
+
+# ---------------------
+# STAR Alignment
+# ---------------------
+star:
+  threads: 8
+  extra_flags: "--outSAMtype BAM SortedByCoordinate --outSAMattributes NH HI NM MD"
+
+# ---------------------
+# featureCounts
+# ---------------------
+featurecounts:
+  threads: 4
+  # s=0 unstranded, s=1 stranded, s=2 reverse-stranded
+  strandedness: 0
+  extra_flags: "-p -B -C"  # paired-end, both mapped, chimeric excluded
+
+# ---------------------
+# DESeq2
+# ---------------------
+deseq2:
+  # Column in samples.csv used for grouping
+  condition_column: "condition"
+  # Reference / baseline condition level
+  reference_level: "EV_20C"
+  # Adjusted p-value cutoff for significance
+  alpha: 0.05
+  # log2 fold-change threshold for MA / volcano
+  lfc_threshold: 1.0
+
+# ---------------------
+# MultiQC
+# ---------------------
+multiqc:
+  config: "config/multiqc_config.yaml"
+
+# ---------------------
+# Results directory
+# ---------------------
+results: "results"

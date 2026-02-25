@@ -1,0 +1,18 @@
+# Raw and reference data - too large for GitHub
+data/
+
+# Pipeline outputs - reproducible from raw data
+results/
+
+# Snakemake internal files
+.snakemake/
+
+# Python
+__pycache__/
+*.pyc
+
+# R
+.Rhistory
+
+# Logs (optional - remove this if you want to keep logs)
+results/logs/

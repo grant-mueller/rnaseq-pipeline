@@ -1,0 +1,193 @@
+# =============================================================================
+# .github/workflows/ci.yaml
+# RNA-seq Pipeline – Continuous Integration
+# =============================================================================
+# Triggered on every push and pull request to main/develop.
+#
+# Jobs:
+#   1. lint       – Snakemake --lint  (rule syntax & best practices)
+#   2. dry-run    – Snakemake -n      (dependency graph without execution)
+#   3. validate   – Python metadata validation script
+#   4. docker     – Build Docker image and verify tool availability
+# =============================================================================
+
+name: RNA-seq Pipeline CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  IMAGE_NAME: rnaseq-pipeline
+
+jobs:
+  # ── Job 1: Snakemake lint ──────────────────────────────────────────────────
+  lint:
+    name: Snakemake Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Snakemake and Python deps
+        run: |
+          pip install --upgrade pip
+          pip install snakemake==8.5.3 pandas pyyaml
+
+      - name: Run snakemake --lint
+        run: |
+          snakemake --lint --snakefile Snakefile
+        # The pipeline needs config; we point at the example config
+        env:
+          SNAKEMAKE_CONFIG: config/config.yaml
+
+  # ── Job 2: Dry-run ────────────────────────────────────────────────────────
+  dry-run:
+    name: Snakemake Dry-Run
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Snakemake and dependencies
+        run: |
+          pip install --upgrade pip
+          pip install snakemake==8.5.3 pandas pyyaml
+
+      - name: Create stub reference files (dry-run only)
+        # Dry-run validates the DAG but doesn't execute rules;
+        # we create empty stubs so input file checks pass.
+        run: |
+          mkdir -p data/reference data/raw results
+          touch data/reference/genome.fa data/reference/annotation.gtf
+          # Create stub FASTQs for each sample in samples.csv
+          python - <<'EOF'
+          import csv
+          import os
+          from pathlib import Path
+
+          with open("config/samples.csv") as fh:
+              for row in csv.DictReader(fh):
+                  for key in ("read1", "read2"):
+                      fq = Path(row[key])
+                      fq.parent.mkdir(parents=True, exist_ok=True)
+                      fq.touch()
+          print("Stub FASTQ files created.")
+          EOF
+
+      - name: Run snakemake dry-run
+        run: |
+          snakemake \
+            --snakefile Snakefile \
+            --configfile config/config.yaml \
+            --dry-run \
+            --reason \
+            --cores 4
+
+  # ── Job 3: Python metadata validation ─────────────────────────────────────
+  validate:
+    name: Metadata Validation
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install pandas pyyaml
+
+      - name: Create stub reference files
+        run: |
+          mkdir -p data/reference data/raw
+          touch data/reference/genome.fa data/reference/annotation.gtf
+          python - <<'EOF'
+          import csv
+          from pathlib import Path
+          with open("config/samples.csv") as fh:
+              for row in csv.DictReader(fh):
+                  for key in ("read1", "read2"):
+                      p = Path(row[key])
+                      p.parent.mkdir(parents=True, exist_ok=True)
+                      p.touch()
+          EOF
+
+      - name: Run metadata validation
+        run: |
+          cd scripts
+          python validate_metadata.py --config ../config/config.yaml
+
+  # ── Job 4: Docker build and tool verification ──────────────────────────────
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    # Only run Docker build on pushes to main to save CI minutes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:latest
+          # Cache layers between runs for faster builds
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Verify tool availability in container
+        run: |
+          docker run --rm ${{ env.IMAGE_NAME }}:latest \
+            bash -c "
+              set -e
+              echo '--- snakemake ---' && snakemake --version
+              echo '--- STAR ---'      && STAR --version
+              echo '--- featureCounts ---' && featureCounts -v 2>&1 | head -2
+              echo '--- fastp ---'     && fastp --version 2>&1 | head -1
+              echo '--- fastqc ---'    && fastqc --version
+              echo '--- multiqc ---'   && multiqc --version
+              echo '--- samtools ---'  && samtools --version | head -1
+              echo '--- R DESeq2 ---'  && Rscript -e 'cat(as.character(packageVersion(\"DESeq2\")), \"\\n\")'
+              echo 'All tools verified ✓'
+            "
+
+      # Optional: push to GHCR on tagged releases
+      - name: Log in to GitHub Container Registry
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image to GHCR on release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
