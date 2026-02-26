@@ -94,7 +94,6 @@ jobs:
             --snakefile Snakefile \
             --configfile config/config.yaml \
             --dry-run \
-            --reason \
             --cores 4
 
   # ── Job 3: Python metadata validation ─────────────────────────────────────
@@ -117,17 +116,20 @@ jobs:
       - name: Create stub reference files
         run: |
           mkdir -p data/reference data/raw
-          touch data/reference/genome.fa data/reference/annotation.gtf
-          python - <<'EOF'
-          import csv
-          from pathlib import Path
-          with open("config/samples.csv") as fh:
-              for row in csv.DictReader(fh):
-                  for key in ("read1", "read2"):
-                      p = Path(row[key])
-                      p.parent.mkdir(parents=True, exist_ok=True)
-                      p.touch()
-          EOF
+          touch data/reference/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa
+          touch data/reference/Caenorhabditis_elegans.WBcel235.111.gtf
+          touch data/raw/SRR8257107_1.fastq.gz
+          touch data/raw/SRR8257107_2.fastq.gz
+          touch data/raw/SRR8257108_1.fastq.gz
+          touch data/raw/SRR8257108_2.fastq.gz
+          touch data/raw/SRR8257109_1.fastq.gz
+          touch data/raw/SRR8257109_2.fastq.gz
+          touch data/raw/SRR8257110_1.fastq.gz
+          touch data/raw/SRR8257110_2.fastq.gz
+          touch data/raw/SRR8257111_1.fastq.gz
+          touch data/raw/SRR8257111_2.fastq.gz
+          touch data/raw/SRR8257112_1.fastq.gz
+          touch data/raw/SRR8257112_2.fastq.gz
 
       - name: Run metadata validation
         run: |
