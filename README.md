@@ -1,6 +1,6 @@
 # RNA-seq Differential Expression Pipeline
 
-[![CI](https://github.com/your-org/rnaseq-pipeline/actions/workflows/ci.yaml/badge.svg)](https://github.com/your-org/rnaseq-pipeline/actions/workflows/ci.yaml)
+[![CI](https://github.com/grant-mueller/rnaseq-pipeline/actions/workflows/ci.yaml/badge.svg)](https://github.com/grant-mueller/rnaseq-pipeline/actions/workflows/ci.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A production-ready, fully containerised RNA-seq differential expression pipeline built with **Snakemake**, **STAR**, **featureCounts**, **DESeq2**, and **MultiQC**.
@@ -8,7 +8,6 @@ A production-ready, fully containerised RNA-seq differential expression pipeline
 ---
 
 ## Overview
-
 ```
 Raw FASTQ  →  FastQC  →  fastp (trim)  →  FastQC (post-trim)
            →  STAR align  →  featureCounts  →  DESeq2  →  MultiQC
@@ -26,8 +25,30 @@ Raw FASTQ  →  FastQC  →  fastp (trim)  →  FastQC (post-trim)
 
 ---
 
-## Repository Layout
+## Example Dataset
 
+This pipeline was developed and validated using publicly available *C. elegans* RNA-seq data from GEO accession [GSE123054](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE123054).
+
+**Study:** Transcriptome analysis of extruded germline from *C. elegans* at different temperatures.
+
+**Comparison:** Empty vector (EV) RNAi-treated worms at 15°C vs 20°C (n=3 replicates per condition).
+
+| Sample | Condition | SRA Accession |
+|--------|-----------|---------------|
+| EV_15C_rep1 | EV_15C | SRR8257107 |
+| EV_15C_rep2 | EV_15C | SRR8257108 |
+| EV_15C_rep3 | EV_15C | SRR8257109 |
+| EV_20C_rep1 | EV_20C | SRR8257110 |
+| EV_20C_rep2 | EV_20C | SRR8257111 |
+| EV_20C_rep3 | EV_20C | SRR8257112 |
+
+**Reference genome:** *C. elegans* WBcel235, Ensembl release 111.
+
+**Results:** 164 differentially expressed genes at padj < 0.05, |LFC| > 1 (120 upregulated, 44 downregulated at 15°C relative to 20°C).
+
+---
+
+## Repository Layout
 ```
 rnaseq-pipeline/
 ├── Snakefile                   # Top-level workflow entry point
@@ -69,7 +90,6 @@ rnaseq-pipeline/
 ## Installation
 
 ### Option A – Docker (recommended, zero dependency setup)
-
 ```bash
 # Build image (~15 min first time)
 docker build -t rnaseq-pipeline .
@@ -85,7 +105,6 @@ docker run --rm \
 ```
 
 ### Option B – Conda environments
-
 ```bash
 # Install Snakemake
 conda create -n snakemake -c conda-forge -c bioconda snakemake=8.5.3
@@ -99,39 +118,68 @@ snakemake --use-conda --cores 8
 
 ## Running the Pipeline
 
-### 1. Prepare inputs
+### 1. Download public data (optional)
 
-**Sample sheet** – edit `config/samples.csv`:
+To reproduce the example dataset, install SRA tools and download the reads:
+```bash
+conda create -n sra-tools -c bioconda sra-tools entrez-direct -y
+conda activate sra-tools
 
+# Download all 6 samples
+cat accessions.txt | while read acc; do
+  fasterq-dump $acc --outdir data/raw --split-files --threads 4 --progress
+  gzip data/raw/${acc}_1.fastq data/raw/${acc}_2.fastq
+done
+```
+
+### 2. Prepare reference genome
+```bash
+mkdir -p data/reference
+cd data/reference
+
+# C. elegans WBcel235 genome and annotation (Ensembl release 111)
+wget https://ftp.ensembl.org/pub/release-111/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz
+wget https://ftp.ensembl.org/pub/release-111/gtf/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.111.gtf.gz
+gunzip *.gz
+```
+
+### 3. Edit the sample sheet
+
+Edit `config/samples.csv` to match your data:
 ```csv
 sample,condition,read1,read2
-ctrl_rep1,control,data/raw/ctrl_rep1_R1.fastq.gz,data/raw/ctrl_rep1_R2.fastq.gz
-treat_rep1,treatment,data/raw/treat_rep1_R1.fastq.gz,data/raw/treat_rep1_R2.fastq.gz
+EV_15C_rep1,EV_15C,data/raw/SRR8257107_1.fastq.gz,data/raw/SRR8257107_2.fastq.gz
+EV_15C_rep2,EV_15C,data/raw/SRR8257108_1.fastq.gz,data/raw/SRR8257108_2.fastq.gz
+EV_15C_rep3,EV_15C,data/raw/SRR8257109_1.fastq.gz,data/raw/SRR8257109_2.fastq.gz
+EV_20C_rep1,EV_20C,data/raw/SRR8257110_1.fastq.gz,data/raw/SRR8257110_2.fastq.gz
+EV_20C_rep2,EV_20C,data/raw/SRR8257111_1.fastq.gz,data/raw/SRR8257111_2.fastq.gz
+EV_20C_rep3,EV_20C,data/raw/SRR8257112_1.fastq.gz,data/raw/SRR8257112_2.fastq.gz
 ```
 
-**Reference files** – place in `data/reference/`:
+### 4. Edit config.yaml
 
-```bash
-data/reference/genome.fa        # Genome FASTA (e.g. GRCh38)
-data/reference/annotation.gtf   # GTF annotation (e.g. Ensembl 110)
+Review `config/config.yaml` and confirm these key settings:
+```yaml
+genome:
+  fasta: "data/reference/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa"
+  gtf:   "data/reference/Caenorhabditis_elegans.WBcel235.111.gtf"
+  sjdb_overhang: 75   # read_length - 1
+
+deseq2:
+  reference_level: "EV_20C"   # control condition
 ```
 
-**Config** – review `config/config.yaml` and adjust as needed (especially `deseq2.reference_level`, `genome.sjdb_overhang`, strandedness).
-
-### 2. Validate metadata (optional but recommended)
-
+### 5. Validate metadata
 ```bash
 python scripts/validate_metadata.py --config config/config.yaml
 ```
 
-### 3. Run a dry-run to check the DAG
-
+### 6. Dry-run to check the DAG
 ```bash
-snakemake --use-conda --cores 8 --dry-run --reason
+snakemake --use-conda --cores 8 --dry-run
 ```
 
-### 4. Execute the pipeline
-
+### 7. Execute the pipeline
 ```bash
 # Local execution
 snakemake --use-conda --cores 8
@@ -151,7 +199,6 @@ docker run --rm \
 ---
 
 ## Expected Outputs
-
 ```
 results/
 ├── fastqc/
@@ -167,7 +214,7 @@ results/
 │       └── {sample}.Log.final.out
 ├── counts/
 │   ├── counts_matrix.txt          # Raw featureCounts output
-│   └── counts_clean.txt           # Cleaned matrix (GeneID × samples)
+│   └── counts_clean.txt           # Cleaned matrix (GeneID x samples)
 ├── deseq2/
 │   ├── DE_results.csv             # Full results table (all genes)
 │   ├── normalized_counts.csv      # VST-normalised expression matrix
@@ -175,8 +222,7 @@ results/
 │   ├── volcano_plot.pdf
 │   └── heatmap.pdf                # Top 50 DE genes
 └── multiqc/
-    ├── multiqc_report.html        # Interactive QC summary
-    └── multiqc_data/
+    └── multiqc_report.html        # Interactive QC summary
 ```
 
 ### Key DESeq2 output columns (`DE_results.csv`)
@@ -209,7 +255,6 @@ Check strandedness with RSeQC or Salmon before running. Set `featurecounts.stran
 All tool versions are pinned in `envs/*.yaml`. The Docker image bakes all dependencies at exact versions. The GitHub Actions CI runs on every push to validate the DAG and rebuild the image.
 
 To record an exact software manifest after a run:
-
 ```bash
 conda env export -n base > envs/exact_versions.yaml
 ```
