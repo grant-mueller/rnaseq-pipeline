@@ -58,8 +58,8 @@ RUN conda config --add channels defaults && \
 
 # ── Install bioinformatics tools via conda ────────────────────────────────────
 # Split into logical groups to leverage Docker layer caching
-RUN conda install -y -n base \
-    snakemake=8.5.3 \
+RUN conda install -y -n base -c conda-forge -c bioconda \
+    "snakemake>=8.0,<9.0" \
     && conda clean -afy
 
 RUN conda install -y -n base \
