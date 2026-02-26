@@ -163,8 +163,8 @@ jobs:
 
       - name: Verify tool availability in container
         run: |
-          docker run --rm ${{ env.IMAGE_NAME }}:latest \
-            bash -c "
+          docker run --rm --entrypoint bash ${{ env.IMAGE_NAME }}:latest \
+            -c "
               set -e
               echo '--- snakemake ---' && snakemake --version
               echo '--- STAR ---'      && STAR --version
