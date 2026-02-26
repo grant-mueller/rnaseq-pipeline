@@ -63,35 +63,35 @@ RUN conda install -y -n base \
     && conda clean -afy
 
 RUN conda install -y -n base \
-    star=2.7.11a \
-    samtools=1.19 \
+    "star>=2.7" \
+    "samtools>=1.19" \
     && conda clean -afy
 
 RUN conda install -y -n base \
-    subread=2.0.6 \
-    fastp=0.23.4 \
-    fastqc=0.12.1 \
-    multiqc=1.21 \
+    "subread>=2.0" \
+    "fastp>=0.23" \
+    "fastqc>=0.12" \
+    "multiqc>=1.21" \
     && conda clean -afy
 
 RUN conda install -y -n base \
-    pandas=2.1.4 \
-    pyyaml=6.0.1 \
+    "pandas>=2.0" \
+    "pyyaml>=6.0" \
     && conda clean -afy
 
 # ── R + Bioconductor packages ─────────────────────────────────────────────────
 RUN conda install -y -n base \
-    r-base=4.3.2 \
-    bioconductor-deseq2=1.42.0 \
-    bioconductor-apeglm=1.24.0 \
-    r-ggplot2=3.4.4 \
-    r-ggrepel=0.9.4 \
-    r-pheatmap=1.0.12 \
-    r-rcolorbrewer=1.1_3 \
-    r-dplyr=1.1.4 \
-    r-tidyr=1.3.0 \
-    r-optparse=1.7.3 \
-    r-tibble=3.2.1 \
+    "r-base>=4.3" \
+    "bioconductor-deseq2>=1.42" \
+    "bioconductor-apeglm>=1.24" \
+    "r-ggplot2>=3.4" \
+    "r-ggrepel>=0.9" \
+    "r-pheatmap>=1.0" \
+    "r-rcolorbrewer>=1.1" \
+    "r-dplyr>=1.1" \
+    "r-tidyr>=1.3" \
+    "r-optparse>=1.7" \
+    "r-tibble>=3.2" \
     && conda clean -afy
 
 # ── Set working directory ─────────────────────────────────────────────────────

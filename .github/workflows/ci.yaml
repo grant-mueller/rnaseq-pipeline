@@ -136,8 +136,7 @@ jobs:
 
       - name: Run metadata validation
         run: |
-          cd scripts
-          python validate_metadata.py --config ../config/config.yaml
+          python scripts/validate_metadata.py --config config/config.yaml
 
   # ── Job 4: Docker build and tool verification ──────────────────────────────
   docker:
@@ -157,8 +156,8 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: ${{ env.IMAGE_NAME }}:latest
-          # Cache layers between runs for faster builds
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 
