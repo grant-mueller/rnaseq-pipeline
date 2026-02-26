@@ -41,24 +41,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
-# ── Miniconda ─────────────────────────────────────────────────────────────────
+# ── Miniforge (conda-forge by default, no ToS issues) ────────────────────────
 ENV CONDA_DIR=/opt/conda
-RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-        -O /tmp/miniconda.sh && \
-    bash /tmp/miniconda.sh -b -p ${CONDA_DIR} && \
-    rm /tmp/miniconda.sh
+RUN wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
+        -O /tmp/miniforge.sh && \
+    bash /tmp/miniforge.sh -b -p ${CONDA_DIR} && \
+    rm /tmp/miniforge.sh
 
 ENV PATH=${CONDA_DIR}/bin:$PATH
 
 # ── Conda channels ────────────────────────────────────────────────────────────
-RUN conda config --add channels defaults && \
-    conda config --add channels bioconda && \
+RUN conda config --add channels bioconda && \
     conda config --add channels conda-forge && \
     conda config --set channel_priority strict
 
 # ── Install bioinformatics tools via conda ────────────────────────────────────
 # Split into logical groups to leverage Docker layer caching
-RUN conda install -y -n base -c conda-forge -c bioconda \
+RUN conda install -y -n base \
     "snakemake>=8.0,<9.0" \
     && conda clean -afy
 
