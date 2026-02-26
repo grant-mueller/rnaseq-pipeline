@@ -72,7 +72,8 @@ jobs:
         # we create empty stubs so input file checks pass.
         run: |
           mkdir -p data/reference data/raw results
-          touch data/reference/genome.fa data/reference/annotation.gtf
+          touch data/reference/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa
+          touch data/reference/Caenorhabditis_elegans.WBcel235.111.gtf
           # Create stub FASTQs for each sample in samples.csv
           python - <<'EOF'
           import csv
@@ -118,18 +119,20 @@ jobs:
           mkdir -p data/reference data/raw
           touch data/reference/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa
           touch data/reference/Caenorhabditis_elegans.WBcel235.111.gtf
-          touch data/raw/SRR8257107_1.fastq.gz
-          touch data/raw/SRR8257107_2.fastq.gz
-          touch data/raw/SRR8257108_1.fastq.gz
-          touch data/raw/SRR8257108_2.fastq.gz
-          touch data/raw/SRR8257109_1.fastq.gz
-          touch data/raw/SRR8257109_2.fastq.gz
-          touch data/raw/SRR8257110_1.fastq.gz
-          touch data/raw/SRR8257110_2.fastq.gz
-          touch data/raw/SRR8257111_1.fastq.gz
-          touch data/raw/SRR8257111_2.fastq.gz
-          touch data/raw/SRR8257112_1.fastq.gz
-          touch data/raw/SRR8257112_2.fastq.gz
+          # Create stub FASTQs for each sample in samples.csv
+          python - <<'EOF'
+          import csv
+          import os
+          from pathlib import Path
+
+          with open("config/samples.csv") as fh:
+              for row in csv.DictReader(fh):
+                  for key in ("read1", "read2"):
+                      fq = Path(row[key])
+                      fq.parent.mkdir(parents=True, exist_ok=True)
+                      fq.touch()
+          print("Stub FASTQ files created.")
+          EOF
 
       - name: Run metadata validation
         run: |

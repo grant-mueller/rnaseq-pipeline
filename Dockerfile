@@ -58,6 +58,7 @@ RUN conda config --add channels bioconda && \
 # ── Install bioinformatics tools via conda ────────────────────────────────────
 # Split into logical groups to leverage Docker layer caching
 RUN conda install -y -n base \
+    "python>=3.11,<3.13" \
     "snakemake>=8.0,<9.0" \
     && conda clean -afy
 
