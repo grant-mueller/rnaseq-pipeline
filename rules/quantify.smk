@@ -1,12 +1,12 @@
 # rules/quantify.smk  –  featureCounts gene-level quantification
-
 rule featurecounts:
     """
     Count reads per gene across all samples in a single featureCounts call.
-    Output is a tab-separated matrix with gene IDs as rows and samples as columns.
+    Uses duplicate-marked BAMs from markdup rule so counts reflect
+    deduplicated reads. Output is a tab-separated matrix (genes x samples).
     """
     input:
-        bams = all_bams(),
+        bams = all_markdup_bams(),
         gtf  = config["genome"]["gtf"],
     output:
         counts  = "{results}/counts/counts_matrix.txt",

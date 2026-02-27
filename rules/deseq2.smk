@@ -1,5 +1,4 @@
 # rules/deseq2.smk  –  DESeq2 differential expression
-
 rule deseq2:
     """
     Run the DESeq2 R script.
@@ -25,6 +24,7 @@ rule deseq2:
     log: "{results}/logs/deseq2/deseq2.log"
     shell:
         """
+        export PATH="$CONDA_PREFIX/bin:$PATH"
         Rscript scripts/deseq2_analysis.R \
             --counts         {input.counts} \
             --samples        {input.samples} \

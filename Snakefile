@@ -6,11 +6,11 @@ Workflow:
   2.  fastp    – adapter trimming & quality filtering
   3.  FastQC   – trimmed read QC
   4.  STAR     – genome index (if absent) + alignment
-  5.  featureCounts – gene-level quantification
-  6.  DESeq2   – differential expression analysis
-  7.  MultiQC  – aggregated QC report
+  5.  markdup  – PCR duplicate marking (samtools markdup)
+  6.  featureCounts – gene-level quantification (uses markdup BAMs)
+  7.  DESeq2   – differential expression analysis
+  8.  MultiQC  – aggregated QC report
 """
-
 import os
 from pathlib import Path
 
@@ -18,14 +18,13 @@ from pathlib import Path
 configfile: "config/config.yaml"
 
 # ── Parse sample sheet via utility script ───────────────────────────────────
-# scripts/parse_samples.py returns a validated dict keyed by sample name
 import sys
 sys.path.insert(0, "scripts")
 from parse_samples import load_samples
 
-SAMPLES = load_samples(config["samples"])
+SAMPLES      = load_samples(config["samples"])
 SAMPLE_NAMES = list(SAMPLES.keys())
-RESULTS = config["results"]
+RESULTS      = config["results"]
 
 # ── Helper functions ─────────────────────────────────────────────────────────
 def get_raw_read(wildcards, read):
@@ -33,8 +32,25 @@ def get_raw_read(wildcards, read):
     return SAMPLES[wildcards.sample][read]
 
 def all_bams():
+    """Raw STAR BAMs — used as input to markdup."""
     return expand(
         "{results}/star/{sample}/{sample}.Aligned.sortedByCoord.out.bam",
+        results=RESULTS,
+        sample=SAMPLE_NAMES,
+    )
+
+def all_markdup_bams():
+    """Duplicate-marked BAMs — used as input to featureCounts."""
+    return expand(
+        "{results}/star/{sample}/{sample}.markdup.bam",
+        results=RESULTS,
+        sample=SAMPLE_NAMES,
+    )
+
+def all_markdup_metrics():
+    """samtools markdup metrics files — picked up by MultiQC."""
+    return expand(
+        "{results}/star/{sample}/{sample}.markdup.metrics.txt",
         results=RESULTS,
         sample=SAMPLE_NAMES,
     )
@@ -64,8 +80,10 @@ rule all:
             sample=SAMPLE_NAMES,
             read=["R1", "R2"],
         ),
-        # Alignments
-        all_bams(),
+        # Duplicate-marked BAMs
+        all_markdup_bams(),
+        # Duplicate metrics
+        all_markdup_metrics(),
         # featureCounts matrix
         f"{RESULTS}/counts/counts_matrix.txt",
         # DESeq2 outputs

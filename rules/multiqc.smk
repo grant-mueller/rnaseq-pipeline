@@ -1,9 +1,10 @@
 # rules/multiqc.smk  –  aggregate QC with MultiQC
-
 rule multiqc:
     """
-    Collect all QC outputs from FastQC, fastp, STAR and featureCounts
-    into a single interactive HTML report.
+    Collect all QC outputs from FastQC, fastp, STAR, samtools markdup,
+    and featureCounts into a single interactive HTML report.
+    MultiQC natively parses samtools markdup metrics files, so duplication
+    rates will appear automatically in the report.
     """
     input:
         # Raw FastQC zips
@@ -26,6 +27,8 @@ rule multiqc:
             "{results}/star/{sample}/{sample}.Log.final.out",
             results=RESULTS, sample=SAMPLE_NAMES,
         ),
+        # samtools markdup metrics (duplication rates)
+        all_markdup_metrics(),
         # featureCounts summary
         f"{RESULTS}/counts/counts_matrix.txt.summary",
     output:
